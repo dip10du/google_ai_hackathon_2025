@@ -1,0 +1,3 @@
+functions-framework==3.*
+google-cloud-bigquery==3.*
+requests # Add requests library for calling external APIs
