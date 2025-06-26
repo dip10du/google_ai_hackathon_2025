@@ -25,6 +25,13 @@ It leverages:
 *   **Centralized Data (BigQuery):** A single source of truth for all supply chain data.
 *   **Backend Logic (Cloud Functions):** Specialized APIs performing operations against the data.
 
+
+## 🤖 Agent Interactions & Scopes
+
+![Agent Interaction Diagram](./FreshFlowAI-Agents.jpeg)
+
+*Figure: Illustration of how different AI agents interact within FreshFlow AI, each operating within their defined scopes (e.g., inventory management, logistics, demand forecasting), and collaborating via orchestrated workflows to optimize the perishable supply chain.*
+
 ## 🏗️ High-Level Architecture
 
 FreshFlow AI follows an agentic architecture where a central AI agent (Vertex AI Conversation) understands user goals via Playbooks and calls specific backend Cloud Functions ("Tools") to access or update data in BigQuery.
