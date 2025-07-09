@@ -1,0 +1,35 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "customer_id",
+    "type": "STRING"
+  },
+  {
+    "name": "customer_name",
+    "type": "STRING"
+  },
+  {
+    "name": "contact_person",
+    "type": "STRING"
+  },
+  {
+    "name": "contact_phone",
+    "type": "STRING"
+  },
+  {
+    "name": "contact_email",
+    "type": "STRING"
+  },
+  {
+    "name": "billing_address",
+    "type": "STRING"
+  },
+  {
+    "name": "shipping_address",
+    "type": "STRING"
+  },
+  {
+    "name": "customer_type",
+    "type": "STRING"
+  }
+]

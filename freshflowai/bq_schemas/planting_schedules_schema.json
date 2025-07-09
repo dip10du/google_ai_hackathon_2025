@@ -1,0 +1,36 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "schedule_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "farm_id",
+    "type": "STRING"
+  },
+  {
+    "name": "product_id",
+    "type": "STRING"
+  },
+  {
+    "name": "product_name",
+    "type": "STRING"
+  },
+  {
+    "name": "planned_planting_date",
+    "type": "DATE"
+  },
+  {
+    "name": "planned_harvest_date_estimate",
+    "type": "DATE"
+  },
+  {
+    "name": "expected_yield_estimate_kg",
+    "type": "INTEGER"
+  },
+  {
+    "name": "status",
+    "type": "STRING"
+  }
+]

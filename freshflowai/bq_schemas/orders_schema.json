@@ -1,0 +1,33 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "order_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "customer_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "order_date",
+    "type": "DATE"
+  },
+  {
+    "name": "delivery_date_requested",
+    "type": "DATE"
+  },
+  {
+    "name": "delivery_address",
+    "type": "STRING"
+  },
+  {
+    "name": "status",
+    "type": "STRING"
+  },
+  {
+    "name": "total_amount",
+    "type": "FLOAT"
+  }
+]

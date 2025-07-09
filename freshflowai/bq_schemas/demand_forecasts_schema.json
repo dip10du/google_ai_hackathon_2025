@@ -1,0 +1,39 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "forecast_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "product_id",
+    "type": "STRING"
+  },
+  {
+    "name": "region",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "forecast_date",
+    "type": "DATE"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "target_date_start",
+    "type": "DATE"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "target_date_end",
+    "type": "DATE"
+  },
+  {
+    "name": "forecasted_demand_kg",
+    "type": "INTEGER"
+  },
+  {
+    "name": "confidence_level",
+    "type": "STRING"
+  }
+]

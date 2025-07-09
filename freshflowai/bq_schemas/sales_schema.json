@@ -1,0 +1,52 @@
+[
+  {
+    "mode": "NULLABLE",
+    "name": "product_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "product_name",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "category",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "price_per_kg",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "units_shipped_kg",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "units_sold_kg",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "units_on_hand_kg",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "supplier",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "farm_location",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "sale_date",
+    "type": "DATE"
+  }
+]

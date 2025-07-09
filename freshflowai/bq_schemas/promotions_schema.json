@@ -1,0 +1,37 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "promotion_id",
+    "type": "STRING"
+  },
+  {
+    "name": "product_id",
+    "type": "STRING"
+  },
+  {
+    "name": "category",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "start_date",
+    "type": "DATE"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "end_date",
+    "type": "DATE"
+  },
+  {
+    "name": "discount_percentage",
+    "type": "FLOAT"
+  },
+  {
+    "name": "description",
+    "type": "STRING"
+  },
+  {
+    "name": "target_region",
+    "type": "STRING"
+  }
+]

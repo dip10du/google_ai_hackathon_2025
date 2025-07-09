@@ -1,0 +1,57 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "harvest_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "farm_id",
+    "type": "STRING"
+  },
+  {
+    "name": "product_id",
+    "type": "STRING"
+  },
+  {
+    "name": "product_name",
+    "type": "STRING"
+  },
+  {
+    "name": "category",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "harvest_date",
+    "type": "DATE"
+  },
+  {
+    "name": "harvested_quantity_kg",
+    "type": "INTEGER"
+  },
+  {
+    "name": "estimated_yield_kg",
+    "type": "INTEGER"
+  },
+  {
+    "name": "quality_score",
+    "type": "FLOAT"
+  },
+  {
+    "name": "quality_notes",
+    "type": "STRING"
+  },
+  {
+    "name": "photos_gcs_path",
+    "type": "STRING"
+  },
+  {
+    "name": "planting_date",
+    "type": "DATE"
+  },
+  {
+    "name": "field_id",
+    "type": "STRING"
+  }
+]

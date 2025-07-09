@@ -1,0 +1,33 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "reading_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "shipment_id",
+    "type": "STRING"
+  },
+  {
+    "name": "vehicle_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "timestamp",
+    "type": "TIMESTAMP"
+  },
+  {
+    "name": "temperature_celsius",
+    "type": "FLOAT"
+  },
+  {
+    "name": "location",
+    "type": "STRING"
+  },
+  {
+    "name": "sensor_id",
+    "type": "STRING"
+  }
+]

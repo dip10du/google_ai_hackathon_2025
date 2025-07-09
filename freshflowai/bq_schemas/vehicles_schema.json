@@ -1,0 +1,27 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "vehicle_id",
+    "type": "STRING"
+  },
+  {
+    "name": "carrier_name",
+    "type": "STRING"
+  },
+  {
+    "name": "vehicle_type",
+    "type": "STRING"
+  },
+  {
+    "name": "capacity_kg",
+    "type": "INTEGER"
+  },
+  {
+    "name": "has_temperature_monitoring",
+    "type": "BOOLEAN"
+  },
+  {
+    "name": "vehicle_license_no",
+    "type": "STRING"
+  }
+]

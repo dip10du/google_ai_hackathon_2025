@@ -1,0 +1,29 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "price_record_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "product_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REQUIRED",
+    "name": "market_date",
+    "type": "DATE"
+  },
+  {
+    "name": "average_market_price_per_kg",
+    "type": "FLOAT"
+  },
+  {
+    "name": "source",
+    "type": "STRING"
+  },
+  {
+    "name": "region",
+    "type": "STRING"
+  }
+]

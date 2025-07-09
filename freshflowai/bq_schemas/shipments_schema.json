@@ -1,0 +1,51 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "shipment_id",
+    "type": "STRING"
+  },
+  {
+    "name": "order_id",
+    "type": "STRING"
+  },
+  {
+    "name": "origin_location_id",
+    "type": "STRING"
+  },
+  {
+    "name": "destination_location_id",
+    "type": "STRING"
+  },
+  {
+    "name": "departure_timestamp",
+    "type": "TIMESTAMP"
+  },
+  {
+    "name": "arrival_timestamp_estimate",
+    "type": "TIMESTAMP"
+  },
+  {
+    "name": "arrival_timestamp_actual",
+    "type": "TIMESTAMP"
+  },
+  {
+    "name": "carrier_name",
+    "type": "STRING"
+  },
+  {
+    "name": "vehicle_id",
+    "type": "STRING"
+  },
+  {
+    "name": "status",
+    "type": "STRING"
+  },
+  {
+    "name": "total_quantity_kg",
+    "type": "INTEGER"
+  },
+  {
+    "name": "requires_cold_chain",
+    "type": "BOOLEAN"
+  }
+]

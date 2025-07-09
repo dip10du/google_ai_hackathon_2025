@@ -1,0 +1,23 @@
+[
+  {
+    "mode": "REQUIRED",
+    "name": "warehouse_id",
+    "type": "STRING"
+  },
+  {
+    "name": "warehouse_name",
+    "type": "STRING"
+  },
+  {
+    "name": "location_address",
+    "type": "STRING"
+  },
+  {
+    "name": "storage_capacity_kg",
+    "type": "INTEGER"
+  },
+  {
+    "name": "refrigerated_capacity_kg",
+    "type": "INTEGER"
+  }
+]
