@@ -6,6 +6,8 @@ Welcome to the FreshFlow AI GitHub repository! This project demonstrates an inno
 
 ## 📊 Project Overview
 
+FreshFlow AI is a Google Cloud-based multimodal agentic solution that streamlines perishable supply chains. Its multilingual conversational intelligence integrates data, automates workflows across farm, market, and logistics, and delivers predictive insights with real-time alerts – enabling faster, smarter decisions to improve efficiency and reduce waste from farm to fork.
+
 FreshFlow AI aims to reduce waste, improve efficiency, and provide real-time visibility across the perishable food supply chain (from farm to fork). It does this by providing a unified, natural language interface powered by an Agentic AI architecture built on Google Cloud services.
 
 ## 💡 The Problem
@@ -18,7 +20,7 @@ The supply chain for perishable goods (fruits, vegetables, etc.) is highly ineff
 
 ## ✨ The Solution: FreshFlow AI
 
-FreshFlow AI acts as an intelligent hub, enabling users across the supply chain to interact with operational data and automate workflows conversationally.
+FreshFlow AI is a Google Cloud-based multimodal agentic solution that streamlines perishable supply chains. Its multilingual conversational intelligence integrates data, automates workflows across farm, market, and logistics, and delivers predictive insights with real-time alerts – enabling faster, smarter decisions to improve efficiency and reduce waste from farm to fork.
 
 It leverages:
 *   **Conversational AI (Vertex AI Conversation):** As the intuitive user interface and workflow orchestrator.
