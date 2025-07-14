@@ -1,0 +1,9 @@
+{
+  "name": "4ccf944d-2c99-4a81-a698-84f3c7f2b526",
+  "displayName": "CustomerTool",
+  "description": "https://getcustomerdetails-150115724444.us-central1.run.app",
+  "openApiSpec": {
+    "ignoreUnknownFields": true
+  },
+  "toolType": "CUSTOMIZED_TOOL"
+}

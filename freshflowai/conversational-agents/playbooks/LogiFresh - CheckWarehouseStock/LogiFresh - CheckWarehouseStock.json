@@ -1,0 +1,66 @@
+{
+  "name": "00966a78-80c3-4ede-98cf-e19c440f7f53",
+  "displayName": "LogiFresh - CheckWarehouseStock",
+  "goal": "Help the user check the current stock availability of a specific product at a warehouse or across all warehouses.\n\n",
+  "tokenCount": 430,
+  "referencedTools": [ "ProductCatalogLookupTool", "LogiFreshTool" ],
+  "instruction": {
+    "steps": [ {
+      "text": "Step 1: Do not greet the user. Start by asking what product they want to check the stock for."
+    }, {
+      "text": "Step 1.1: $product_id"
+    }, {
+      "text": "Ask the user to provide the product name."
+    }, {
+      "text": "Use ${TOOL:ProductCatalogLookupTool} to retrieve the $product_id."
+    }, {
+      "text": "Step 1.2: $warehouse_id (optional)"
+    }, {
+      "text": "Ask if they want to check stock at a specific warehouse."
+    }, {
+      "text": "If yes, ask for the warehouse id to get the $warehouse_id."
+    }, {
+      "text": "If no or unsure, leave this field empty to check across all warehouses."
+    }, {
+      "text": "Step 2: Confirm the gathered details with the user."
+    }, {
+      "text": "Confirm the product_id and (if applicable) the warehouse_id."
+    }, {
+      "text": "Ask if they want to proceed."
+    }, {
+      "text": "Step 3: Once confirmed, use ${TOOL:LogiFreshTool} to call the CheckWarehouseStock endpoint with the collected data."
+    }, {
+      "text": "Step 4: Handle the API response:"
+    }, {
+      "text": "If status: success, share the following:"
+    }, {
+      "text": "product_id"
+    }, {
+      "text": "warehouse_id (if applicable)"
+    }, {
+      "text": "available_quantity_kg"
+    }, {
+      "text": "reserved_quantity_kg"
+    }, {
+      "text": "in_transit_quantity_kg"
+    }, {
+      "text": "last_updated_time"
+    }, {
+      "text": "If no record is found, inform the user and ask if they’d like to try a different product or warehouse."
+    }, {
+      "text": "If status: error, display the error message and ask if the user wants to retry or exit."
+    }, {
+      "text": "Step 5: Ask the user if they’d like to:"
+    }, {
+      "text": "Check stock for another product"
+    }, {
+      "text": "View transfer options or reorder suggestions"
+    }, {
+      "text": "End the conversation"
+    } ]
+  },
+  "playbookType": "TASK",
+  "codeBlock": {
+  
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "43c643e6-64d2-4a4c-a648-ab217e850273",
+  "displayName": "AgriOptimizeTool",
+  "description": "https://agrioptimize-150115724444.us-central1.run.app",
+  "openApiSpec": {
+    "ignoreUnknownFields": true
+  },
+  "toolType": "CUSTOMIZED_TOOL"
+}

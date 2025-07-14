@@ -1,0 +1,8 @@
+{
+  "name": "2528291e-3979-46b3-9b0f-d6d4311ef5bc",
+  "displayName": "ProductCatalogLookupTool",
+  "openApiSpec": {
+    "ignoreUnknownFields": true
+  },
+  "toolType": "CUSTOMIZED_TOOL"
+}

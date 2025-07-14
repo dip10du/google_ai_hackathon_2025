@@ -1,0 +1,43 @@
+{
+  "displayName": "Fresh Flow AI",
+  "defaultLanguageCode": "en",
+  "timeZone": "America/Chicago",
+  "enableLogging": true,
+  "projectNumber": 150115724444,
+  "speechToTextSettings": {
+  
+  },
+  "advancedSettings": {
+    "audioExportGcsDestination": {
+    
+    },
+    "speechSettings": {
+      "endpointerSensitivity": 90,
+      "noSpeechTimeout": {
+        "seconds": 5
+      }
+    },
+    "playbackInterruptionSettings": {
+    
+    },
+    "loggingSettings": {
+      "enableInteractionLogging": true
+    },
+    "speechAdaptationSettings": {
+    
+    }
+  },
+  "speakerIdSettings": {
+  
+  },
+  "duplexSettings": {
+  
+  },
+  "answerFeedbackSettings": {
+  
+  },
+  "startPlaybook": "FreshFlow AI – Master Agent",
+  "webClientSettings": {
+    "boxBorderRadius": "0"
+  }
+}

@@ -25,7 +25,6 @@ It leverages:
 *   **Centralized Data (BigQuery):** A single source of truth for all supply chain data.
 *   **Backend Logic (Cloud Functions):** Specialized APIs performing operations against the data.
 
-
 ## 🤖 Agent Interactions & Scopes
 
 ![Agent Interaction Diagram](./FreshFlowAI-Agents.jpeg)
@@ -36,7 +35,24 @@ It leverages:
 
 FreshFlow AI follows an agentic architecture where a central AI agent (Vertex AI Conversation) understands user goals via Playbooks and calls specific backend Cloud Functions ("Tools") to access or update data in BigQuery.
 
-
 ![FreshFlow AI Architecture](./FreshFlowAI.gif)
 
 *Figure: High-level architecture of FreshFlow AI, illustrating the integration of Vertex AI Conversation, Cloud Functions, and BigQuery on Google Cloud Platform.*
+
+## 📁 Project Structure
+
+Below is an overview of the key folders included in this repository:
+
+```
+freshflowai/
+├── functions/                # Cloud Functions source code and APIs
+├── bq_tables_schemas/        # BigQuery table schema definitions
+├── conversational-agents/    # Additional conversational agent logic and configs
+└── ReadMe.md                 # Project documentation (this file)
+```
+
+Each folder contains a `README.md` with more details about its contents and usage.
+
+## Contributing
+
+Feel free to open issues or submit pull requests for improvements or bug fixes.

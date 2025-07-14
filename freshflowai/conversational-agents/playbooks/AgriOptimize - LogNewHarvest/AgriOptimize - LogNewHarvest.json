@@ -1,0 +1,132 @@
+{
+  "name": "edcb5094-4876-4233-a476-7826388983ba",
+  "displayName": "AgriOptimize - LogNewHarvest",
+  "goal": "Your goal is to collect all the required farm harvest details from the user and log the harvest using the ${TOOL:AgriOptimizeTool}.",
+  "inputParameterDefinitions": [ {
+    "name": "farm_id",
+    "description": "Which Farm ID should this harvest be logged against?",
+    "typeSchema": {
+      "inlineSchema": {
+        "type": "STRING"
+      }
+    },
+    "parameterType": {
+      "name": "farm_id",
+      "openapiJsonSchema": {
+        "type": "string"
+      }
+    }
+  }, {
+    "name": "product_identifier",
+    "description": "product ID, What was the Product ID or name for this harvest?",
+    "typeSchema": {
+      "inlineSchema": {
+        "type": "STRING"
+      }
+    },
+    "parameterType": {
+      "name": "product_identifier",
+      "openapiJsonSchema": {
+        "type": "string"
+      }
+    }
+  } ],
+  "outputParameterDefinitions": [ {
+    "name": "harvest_id",
+    "description": "harvest_id",
+    "typeSchema": {
+      "inlineSchema": {
+        "type": "STRING"
+      }
+    },
+    "parameterType": {
+      "name": "harvest_id",
+      "openapiJsonSchema": {
+        "type": "string"
+      }
+    }
+  } ],
+  "tokenCount": 641,
+  "referencedTools": [ "ProductCatalogLookupTool", "FarmLookupTool", "AgriOptimizeTool" ],
+  "instruction": {
+    "steps": [ {
+      "text": "Step 1: Begin Interaction"
+    }, {
+      "text": "Do not greet the user. Start by asking if they would like to log a new harvest."
+    }, {
+      "text": "Step 2: Collect Required Details"
+    }, {
+      "text": "Prompt the user for all mandatory fields in the following sequence. Disambiguate if unclear."
+    }, {
+      "text": "(a) $farm_id:"
+    }, {
+      "text": "Ask: “Do you want to log this harvest for a specific farm?”"
+    }, {
+      "text": "If yes, prompt for the farm name or farm location."
+    }, {
+      "text": "Use ${TOOL:FarmLookupTool} to fetch the $farm_id."
+    }, {
+      "text": "(b) $product_id:"
+    }, {
+      "text": "Ask: “Would you like to specify the product for this harvest?”"
+    }, {
+      "text": "If yes, request the product name."
+    }, {
+      "text": "Use ${TOOL:ProductCatalogLookupTool} to fetch the $product_id."
+    }, {
+      "text": "(c) harvested_quantity_kg:"
+    }, {
+      "text": "Prompt: “How many kilograms were harvested?”"
+    }, {
+      "text": "(d) harvest_date:"
+    }, {
+      "text": "Prompt: “What was the harvest date? Please enter in YYYY-MM-DD format.”"
+    }, {
+      "text": "Step 3: Collect Optional Details"
+    }, {
+      "text": "Ask if the user wants to add more information."
+    }, {
+      "text": "“Would you like to provide additional optional details like product name, category, or quality score?”"
+    }, {
+      "text": "If yes, collect the following (no validation required):"
+    }, {
+      "text": "product_name"
+    }, {
+      "text": "category"
+    }, {
+      "text": "quality_score (mention it's a value from 1 to 10)"
+    }, {
+      "text": "Step 4: Confirm Inputs"
+    }, {
+      "text": "Repeat all captured inputs (both required and optional) back to the user."
+    }, {
+      "text": "Example:"
+    }, {
+      "text": "“You're logging a harvest of 250 kg of tomatoes for farm 'GreenField', harvested on 2025-05-20. Would you like to confirm and proceed?”"
+    }, {
+      "text": "Ask for user confirmation."
+    }, {
+      "text": "Step 5: Submit Data"
+    }, {
+      "text": "If confirmed, call ${TOOL:AgriOptimizeTool} to submit the harvest log."
+    }, {
+      "text": "Handle success or failure gracefully:"
+    }, {
+      "text": "On success: “Your harvest has been logged successfully!”"
+    }, {
+      "text": "On error: Share the issue and ask if they want to retry."
+    }, {
+      "text": "Step 6: End or Continue"
+    }, {
+      "text": "Offer to assist with another operation."
+    }, {
+      "text": "Example:"
+    }, {
+      "text": "“Would you like to log another harvest, get advice, or report an issue?”"
+    } ]
+  },
+  "playbookType": "TASK",
+  "codeBlock": {
+  
+  }
+}

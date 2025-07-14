@@ -1,0 +1,342 @@
+openapi: 3.0.0
+info:
+  title: MarketFlow AI Backend API
+  version: v1.0.0
+  description: API for managing market demand, pricing, product availability, and order placement.
+servers:
+  - url: https://marketflow-150115724444.us-central1.run.app
+    description: MarketFlow Cloud Function Endpoint
+
+# Reusable Schema Components
+components:
+  schemas:
+    ErrorResponse: # Re-defined here for completeness, or could be a shared component if possible in Vertex AI tools
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+        details:
+          type: string # Or a more structured error object
+          nullable: true
+      required:
+        - status
+        - message
+
+    Forecast:
+      type: object
+      properties:
+        forecast_id:
+          type: string
+          format: uuid
+        region:
+          type: string
+          nullable: true
+        forecast_date:
+          type: string
+          format: date
+        target_date_start:
+          type: string
+          format: date
+        target_date_end:
+          type: string
+          format: date
+        forecasted_demand_kg:
+          type: integer
+        confidence_level:
+          type: string
+          enum: [High, Medium, Low]
+
+    MarketPrice:
+      type: object
+      properties:
+        price_record_id:
+          type: string
+          format: uuid
+        region:
+          type: string
+          nullable: true
+        market_date:
+          type: string
+          format: date
+        average_market_price_per_kg:
+          type: number
+          format: float
+        source:
+          type: string
+
+    AvailabilityInfo:
+      type: object
+      properties:
+        product_id:
+          type: string
+        location_id:
+          type: string
+          nullable: true
+        total_on_hand_kg:
+          type: integer
+        num_stock_locations:
+          type: integer
+        total_incoming_shipments_kg:
+          type: integer
+        total_upcoming_harvest_kg:
+          type: integer
+
+    OrderItemInput:
+      type: object
+      properties:
+        product_id:
+          type: string
+          description: ID of the product.
+        quantity_kg:
+          type: integer
+          description: Quantity of the product in kilograms.
+      required:
+        - product_id
+        - quantity_kg
+
+# API Paths
+paths:
+  /forecast: # Path relative to server URL
+    post:
+      summary: Get demand forecast for a product.
+      description: Retrieves predicted demand for a product based on specified criteria.
+      operationId: getDemandForecast
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: string
+                  description: ID of the product for the forecast.
+                target_date_start:
+                  type: string
+                  format: date
+                  description: Start date of the forecast period (YYYY-MM-DD).
+                target_date_end:
+                  type: string
+                  format: date
+                  description: End date of the forecast period (YYYY-MM-DD).
+                region:
+                  type: string
+                  nullable: true
+                  description: (Optional) Geographical region for the forecast.
+              required:
+                - product_id
+                - target_date_start
+                - target_date_end
+      responses:
+        '200':
+          description: Demand forecast retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  forecasts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Forecast'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /prices/current: # Path relative to server URL
+    post:
+      summary: Get current or historical market prices for a product.
+      description: Retrieves market prices based on product, date, and region.
+      operationId: getCurrentMarketPrices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: string
+                  description: ID of the product.
+                date:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: (Optional) Specific date for price lookup (YYYY-MM-DD). Defaults to today.
+                region:
+                  type: string
+                  nullable: true
+                  description: (Optional) Geographical region.
+              required:
+                - product_id
+      responses:
+        '200':
+          description: Market prices retrieved successfully or no data found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  prices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MarketPrice'
+                  message: # Optional, e.g., if no prices found
+                    type: string
+                    nullable: true
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /inventory/available: # Path relative to server URL
+    post:
+      summary: Check product availability.
+      description: Checks on-hand stock, incoming shipments, and future harvests for a product.
+      operationId: checkProductAvailability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: string
+                  description: ID of the product to check.
+                location_id:
+                  type: string
+                  nullable: true
+                  description: (Optional) Specific location ID to filter by (e.g., warehouse or farm).
+              required:
+                - product_id
+      responses:
+        '200':
+          description: Product availability information retrieved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  product_id:
+                    type: string
+                  location_id: # Echo back filter used
+                    type: string
+                    nullable: true
+                  total_on_hand_kg:
+                    type: integer
+                  num_stock_locations:
+                    type: integer
+                  total_incoming_shipments_kg:
+                    type: integer
+                  total_upcoming_harvest_kg:
+                    type: integer
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order: # Path relative to server URL
+    post:
+      summary: Place a new purchase order.
+      description: Creates a new order for a customer with specified items.
+      operationId: placePurchaseOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: ID of the customer placing the order.
+                items:
+                  type: array
+                  description: List of items in the order.
+                  items:
+                    $ref: '#/components/schemas/OrderItemInput'
+                delivery_date_requested:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: (Optional) Requested delivery date (YYYY-MM-DD).
+                delivery_address:
+                  type: string
+                  nullable: true
+                  description: (Optional) Specific delivery address if different from customer's default.
+                status:
+                  type: string
+                  nullable: true
+                  description: (Optional) Initial status of the order (e.g., 'Pending').
+              required:
+                - customer_id
+                - items
+      responses:
+        '200':
+          description: Purchase order placed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  order_id:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+                  total_amount:
+                    type: number
+                    format: float
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

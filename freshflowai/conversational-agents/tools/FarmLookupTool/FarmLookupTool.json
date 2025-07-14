@@ -1,0 +1,8 @@
+{
+  "name": "2f793d30-d2d2-43f1-9e12-5f563d47307d",
+  "displayName": "FarmLookupTool",
+  "openApiSpec": {
+    "ignoreUnknownFields": true
+  },
+  "toolType": "CUSTOMIZED_TOOL"
+}

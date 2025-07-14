@@ -1,0 +1,72 @@
+{
+  "name": "57745fa8-52d4-4eac-9774-5b2c8722a7c1",
+  "displayName": "MarketFlow - GetCurrentMarketPrices",
+  "goal": "Help the user retrieve the current or historical market price for a product, optionally filtered by date and region.",
+  "tokenCount": 507,
+  "referencedTools": [ "ProductCatalogLookupTool", "MarketFlowTool" ],
+  "instruction": {
+    "steps": [ {
+      "text": "Step 1: Do not greet the user. Begin by collecting the required product details."
+    }, {
+      "text": "Step 1.1: $product_id"
+    }, {
+      "text": "Ask the user which product they want to check the price for."
+    }, {
+      "text": "If they share the product name instead of product ID, use ${TOOL:ProductCatalogLookupTool} to fetch the $product_id."
+    }, {
+      "text": "Step 2: Ask if the user wants to look up prices for a specific date."
+    }, {
+      "text": "Step 2.1: $date (optional)"
+    }, {
+      "text": "If yes, ask for the date in YYYY-MM-DD format."
+    }, {
+      "text": "If not provided, assume today’s date."
+    }, {
+      "text": "Step 3: Ask if the user wants to narrow the search to a specific region."
+    }, {
+      "text": "Step 3.1: $region (optional)"
+    }, {
+      "text": "If yes, ask the user to share the region name."
+    }, {
+      "text": "Step 4: Confirm all collected information with the user."
+    }, {
+      "text": "Reiterate the product ID, date (if given), and region (if given)."
+    }, {
+      "text": "Ask the user to confirm if everything is correct."
+    }, {
+      "text": "Step 5: If the user confirms, use ${TOOL:MarketFlowTool} to call the getCurrentMarketPrices endpoint with the collected inputs."
+    }, {
+      "text": "Step 6: Handle the API response."
+    }, {
+      "text": "If status: success and prices are available, present the results clearly:"
+    }, {
+      "text": "average_market_price_per_kg"
+    }, {
+      "text": "market_date"
+    }, {
+      "text": "region"
+    }, {
+      "text": "source"
+    }, {
+      "text": "If no prices are returned, inform the user that no price data was found for the given input."
+    }, {
+      "text": "If status: error or HTTP 400, inform the user about invalid product or input and ask if they’d like to retry."
+    }, {
+      "text": "If HTTP 500, let the user know of a backend issue and suggest trying again later."
+    }, {
+      "text": "Step 7: Offer the user follow-up options:"
+    }, {
+      "text": "Check product availability"
+    }, {
+      "text": "View demand forecast"
+    }, {
+      "text": "Place an order"
+    }, {
+      "text": "End the conversation if no further action is needed"
+    } ]
+  },
+  "playbookType": "TASK",
+  "codeBlock": {
+  
+  }
+}

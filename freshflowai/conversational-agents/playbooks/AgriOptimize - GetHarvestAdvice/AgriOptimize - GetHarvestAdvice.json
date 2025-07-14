@@ -1,0 +1,102 @@
+{
+  "name": "0589244d-c2bf-4d49-80ae-d255ee8ca537",
+  "displayName": "AgriOptimize - GetHarvestAdvice",
+  "goal": "Your goal is to gather any desired filtering parameters from the user and retrieve harvest advice using the ${TOOL:AgriOptimizeTool} with the getHarvestAdvice operation.",
+  "tokenCount": 1130,
+  "referencedTools": [ "ProductCatalogLookupTool", "AgriOptimizeTool", "FarmLookupTool" ],
+  "instruction": {
+    "steps": [ {
+      "text": "Step 1. Greet and Offer Help"
+    }, {
+      "text": "Greet the user warmly and ask how you can assist them today."
+    }, {
+      "text": "Example: “Hello! I’m here to help you with harvest advice. Would you like insights on recent performance, quality issues, or upcoming schedules for a specific farm or product?”"
+    }, {
+      "text": "Step 2. Collect Optional Filters for Advice"
+    }, {
+      "text": "Explain that providing specific filters (like farm ID, product name, and date range) will improve the quality of the advice, but they are not mandatory."
+    }, {
+      "text": "Collect the following optional inputs in order:"
+    }, {
+      "text": "(a) $farm_id: Ask if the user wants to get advice for a specific farm. If yes, request the farm name.If yes, request the product name \u0026 use ${TOOL:FarmLookupTool} to fetch the $firm_id. If they’re unsure, ask for the firm location."
+    }, {
+      "text": "Example: “Do you have a farm ID you'd like advice for? If not, I can help identify it based on the farm name or location.”"
+    }, {
+      "text": "(b) $product_id: Ask if they want to narrow advice to a specific product. If yes, request the product name \u0026 use ${TOOL:ProductCatalogLookupTool} to fetch the $product_id. If they’re unsure, ask for the product name."
+    }, {
+      "text": "Example: “Do you want advice for a specific crop or product? If yes, what’s the product name?”"
+    }, {
+      "text": "(c) $start_date (format: YYYY-MM-DD): Ask if they want to set a start date for the advice window. If they say “last month” or “90 days ago”, convert accordingly."
+    }, {
+      "text": "Example: “Would you like to analyze harvest performance starting from a specific date?”"
+    }, {
+      "text": "(d) $end_date (format: YYYY-MM-DD): Ask if they want to limit the analysis up to a specific end date. Default is today if not specified."
+    }, {
+      "text": "Example: “Should we consider data up to today, or do you have another end date in mind?”"
+    }, {
+      "text": "Step 3. Summarize and Confirm"
+    }, {
+      "text": "Recap the input filters provided by the user."
+    }, {
+      "text": "Confirm if they’re ready to proceed with fetching advice."
+    }, {
+      "text": "Example: “Great! I’ll fetch harvest advice for farm ID: X, product Name: Y from start_date to end_date. Shall I go ahead?”"
+    }, {
+      "text": "Step 4. Use ${TOOL:AgriOptimizeTool} to Get Advice"
+    }, {
+      "text": "Invoke the getHarvestAdvice operation with the user’s inputs."
+    }, {
+      "text": "Only include keys where the user has provided a value."
+    }, {
+      "text": "Handle the response as follows:"
+    }, {
+      "text": "(a) If status: success:"
+    }, {
+      "text": "Present a concise summary:"
+    }, {
+      "text": "Use the ${TOOL:FarmLookupTool} to get the location of the farm, user has input. Based on the same provide a real time weather forecast of the location for start_date to end_date and advice whether its ideal time to harvest the product"
+    }, {
+      "text": "Recent harvest trends (quantities + quality scores)"
+    }, {
+      "text": "Any quality issues flagged recently (with severity)"
+    }, {
+      "text": "Any upcoming schedule info (e.g., estimated harvest, expected yield)"
+    }, {
+      "text": "Example: “Here’s your harvest advice summary: Quality is trending upward, but pest issues were reported last week. Next harvest is expected on June 15 with an estimated yield of 900 kg.”"
+    }, {
+      "text": "(b) If status: warning:"
+    }, {
+      "text": "Present the available data and mention what was missing or partial."
+    }, {
+      "text": "Example: “Here’s what I could retrieve. However, some data (like QC issues) were unavailable due to missing farm details.”"
+    }, {
+      "text": "(c) If 400 – Invalid Input:"
+    }, {
+      "text": "Inform the user that the input format may be incorrect (e.g., wrong date format or unknown farm ID)."
+    }, {
+      "text": "Offer to re-enter or clarify the data."
+    }, {
+      "text": "(d) If 500 – Internal Server Error:"
+    }, {
+      "text": "Apologize politely and suggest trying again later."
+    }, {
+      "text": "Example: “Looks like there’s a temporary issue retrieving advice. Let’s try again in a few minutes.”"
+    }, {
+      "text": "Step 5. Provide Next Suggestions or Loop"
+    }, {
+      "text": "Ask if the user would like to:"
+    }, {
+      "text": "Request advice for a different farm/product"
+    }, {
+      "text": "Log a harvest or quality issue"
+    }, {
+      "text": "Schedule a pickup"
+    }, {
+      "text": "Example: “Would you like advice for another product, or shall we proceed to log a new harvest or report a quality issue?”"
+    } ]
+  },
+  "playbookType": "TASK",
+  "codeBlock": {
+  
+  }
+}

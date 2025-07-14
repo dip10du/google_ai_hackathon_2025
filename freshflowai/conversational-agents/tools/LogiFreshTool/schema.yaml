@@ -1,0 +1,425 @@
+openapi: 3.0.0
+info:
+  title: LogiFresh AI Backend API
+  version: v1.0.0
+  description: API for managing logistics, inventory, shipments, cold chain, and route optimization.
+servers:
+  - url: https://logifresh-150115724444.us-central1.run.app
+    description: LogiFresh Cloud Function Endpoint
+
+# Reusable Schema Components
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+        details:
+          type: string # Or a more structured error object
+          nullable: true
+      required:
+        - status
+        - message
+
+    ShipmentDetails:
+      type: object
+      properties:
+        shipment_id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+          nullable: true
+        origin_location_id:
+          type: string
+        destination_location_id:
+          type: string
+        departure_timestamp:
+          type: string
+          format: date-time
+        arrival_timestamp_estimate:
+          type: string
+          format: date-time
+        arrival_timestamp_actual:
+          type: string
+          format: date-time
+          nullable: true
+        carrier_name:
+          type: string
+          nullable: true
+        vehicle_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+        total_quantity_kg:
+          type: integer
+          nullable: true
+        requires_cold_chain:
+          type: boolean
+          nullable: true
+
+    ColdChainReading:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        temperature_celsius:
+          type: number
+          format: float
+        location:
+          type: string
+          nullable: true
+        sensor_id:
+          type: string
+          nullable: true
+
+    StockItem:
+      type: object
+      properties:
+        stock_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+        current_quantity_kg:
+          type: integer
+        entry_date:
+          type: string
+          format: date
+        best_before_date:
+          type: string
+          format: date
+          nullable: true
+        expiry_date:
+          type: string
+          format: date
+          nullable: true
+        storage_conditions:
+          type: string
+          nullable: true
+        status:
+          type: string
+
+    RouteStop:
+      type: object
+      properties:
+        stop_number:
+          type: integer
+        destination_id:
+          type: string
+          description: "ID of the destination (e.g., customer_id, order_id)"
+        destination_address:
+          type: string
+        estimated_arrival_time:
+          type: string
+          format: date-time
+        estimated_service_duration_minutes:
+          type: integer
+
+# API Paths
+paths:
+  /shipment/status: # Path relative to server URL
+    post:
+      summary: Track the status and location of a shipment.
+      description: Retrieves details for a specific shipment ID, including recent cold chain readings if applicable.
+      operationId: trackShipmentLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shipment_id:
+                  type: string
+                  description: The ID of the shipment to track.
+              required:
+                - shipment_id
+      responses:
+        '200':
+          description: Shipment details retrieved successfully or shipment not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success, not_found, warning] # Warning if some sub-queries failed
+                  shipment_details:
+                    $ref: '#/components/schemas/ShipmentDetails'
+                  recent_cold_chain_readings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ColdChainReading'
+                  message: # Optional message if status is 'not_found' or 'warning'
+                    type: string
+                    nullable: true
+                  details: # Optional if status is 'warning'
+                     type: string
+                     nullable: true
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /issue/coldchain: # Path relative to server URL
+    post:
+      summary: Report a cold chain issue or log a temperature reading.
+      description: Logs a new temperature reading for a shipment, often used to report excursions.
+      operationId: reportColdChainIssue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shipment_id:
+                  type: string
+                  description: The ID of the shipment related to the reading.
+                temperature_celsius:
+                  type: number
+                  format: float
+                  description: The temperature reading in Celsius.
+                timestamp:
+                  type: string
+                  format: date-time # ISO 8601 format
+                  description: The timestamp of the reading.
+                vehicle_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: (Optional) ID of the vehicle.
+                location:
+                  type: string
+                  nullable: true
+                  description: (Optional) Location where the reading was taken (e.g., Lat/Lon string).
+                sensor_id:
+                  type: string
+                  nullable: true
+                  description: (Optional) ID of the temperature sensor.
+              required:
+                - shipment_id
+                - temperature_celsius
+                - timestamp
+      responses:
+        '200':
+          description: Cold chain reading reported successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  reading_id:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /inventory/stock: # Path relative to server URL
+    post:
+      summary: Check warehouse or location stock levels.
+      description: Retrieves inventory stock items based on location and optional filters.
+      operationId: checkWarehouseStock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                location_id:
+                  type: string
+                  description: ID of the location (e.g., warehouse_id, farm_id) to check stock for.
+                product_id:
+                  type: string
+                  nullable: true
+                  description: (Optional) ID of the product to filter by.
+                status:
+                  type: string
+                  nullable: true
+                  description: (Optional) Filter by stock status (e.g., 'Available', 'Expired'). Defaults to 'Available'.
+                nearing_expiry:
+                  type: boolean
+                  nullable: true
+                  description: (Optional) If true, filters for stock nearing its expiry date (e.g., within next 7 days).
+              required:
+                - location_id
+      responses:
+        '200':
+          description: Warehouse stock information retrieved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  location_id:
+                    type: string
+                  stock_items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StockItem'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /route/optimize: # Path relative to server URL
+    post:
+      summary: Optimize a delivery route (Simulated).
+      description: Generates a simulated optimized delivery route for a vehicle to multiple destinations.
+      operationId: optimizeDeliveryRoute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicle_id:
+                  type: string
+                  format: uuid
+                  description: ID of the vehicle to be used for the route.
+                destination_locations:
+                  type: array
+                  description: List of destination identifiers (e.g., customer IDs, order IDs, or addresses that the backend can resolve).
+                  items:
+                    type: string
+              required:
+                - vehicle_id
+                - destination_locations
+      responses:
+        '200':
+          description: Simulated route generated or issue encountered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success, unavailable, not_found]
+                  vehicle_id:
+                    type: string
+                    format: uuid
+                    nullable: true
+                  num_stops:
+                    type: integer
+                    nullable: true
+                  estimated_total_duration_minutes:
+                    type: integer
+                    nullable: true
+                  route_stops:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteStop'
+                    nullable: true
+                  message:
+                    type: string
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /logistics/schedule-pickup-request: # Path relative to server URL
+    post:
+      summary: Internal endpoint for AgriOptimizeTool to notify Logistics about a pickup request.
+      description: Receives pickup request details from AgriOptimize domain and acknowledges processing.
+      operationId: scheduleFarmPickupLogistics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                farm_id:
+                  type: string
+                product_id:
+                  type: string
+                quantity_kg:
+                  type: integer
+                requested_date:
+                  type: string
+                  format: date
+              required:
+                - farm_id
+                - product_id
+                - quantity_kg
+                - requested_date
+      responses:
+        '200':
+          description: Pickup request acknowledged by Logistics or error during processing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [acknowledged, error]
+                  message:
+                    type: string
+        '400':
+          description: Invalid request (from AgriOptimize Tool call).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error in Logistics processing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

@@ -1,0 +1,56 @@
+openapi: 3.0.0
+info:
+  title: Product Lookup by Name API
+  version: 1.0.0
+  description: API to lookup product details, including ID, by product name from the BigQuery product catalog.
+servers:
+  - url: https://getproduct-150115724444.us-central1.run.app
+paths:
+  /: # The root path for HTTP triggered Cloud Functions
+    post: # Cloud Functions triggered by HTTP POST
+      operationId: lookupProductDetailsByName # Unique ID for this operation
+      summary: Looks up product details based on a partial or full name. Returns a list of matches.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_name:
+                  type: string
+                  description: The name or partial name of the product to search for.
+      responses:
+        '200':
+          description: List of matching products (can be empty).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        product_id: { type: string, description: "Unique identifier for the product." }
+                        product_name: { type: string, description: "Full name of the product." }
+                        category: { type: string, description: "Category (e.g., Vegetables, Fruits)." }
+                        storage_requirements: { type: string, description: "Storage needs (e.g., Refrigerated)." }
+        '400':
+          description: Invalid request (e.g., missing product_name).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+        '500':
+          description: Internal server error during lookup.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  details: { type: string }

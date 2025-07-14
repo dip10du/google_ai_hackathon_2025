@@ -1,0 +1,159 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Vehicle Lookup API",
+    "version": "1.0.0",
+    "description": "API to lookup vehicle details by license number from BigQuery."
+  },
+  "servers": [
+    {
+      "url": "https://getvehicledetails-150115724444.us-central1.run.app"
+    }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "lookupVehicleDetailsByLicense",
+        "summary": "Looks up vehicle details based on license number.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vehicle_license_no": {
+                    "type": "string",
+                    "description": "The license number of the vehicle to search for."
+                  }
+                },
+                "required": ["vehicle_license_no"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vehicle found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "matches": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "vehicle_id": {
+                            "type": "string",
+                            "description": "Unique identifier for the vehicle."
+                          },
+                          "carrier_name": {
+                            "type": "string",
+                            "description": "Name of the carrier."
+                          },
+                          "vehicle_type": {
+                            "type": "string",
+                            "description": "Type of vehicle (e.g., Reefer Truck)."
+                          },
+                          "capacity_kg": {
+                            "type": "integer",
+                            "description": "Vehicle capacity in kilograms."
+                          },
+                          "has_temperature_monitoring": {
+                            "type": "boolean",
+                            "description": "Indicates if the vehicle has temperature monitoring."
+                          },
+                          "vehicle_license_no": {
+                            "type": "string",
+                            "description": "License number of the vehicle."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (e.g., missing license number).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vehicle not found for the given license number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "matches": {
+                      "type": "array",
+                      "description": "Will be an empty list.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "vehicle_id": {
+                            "type": "string"
+                          },
+                          "carrier_name": {
+                            "type": "string"
+                          },
+                          "vehicle_type": {
+                            "type": "string"
+                          },
+                          "capacity_kg": {
+                            "type": "integer"
+                          },
+                          "has_temperature_monitoring": {
+                            "type": "boolean"
+                          },
+                          "vehicle_license_no": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error during lookup.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Customer Lookup API",
+    "version": "1.0.0",
+    "description": "API to lookup customer details by name query, or list customers from BigQuery."
+  },
+  "servers": [
+    {
+      "url": "https://getcustomerdetails-150115724444.us-central1.run.app"
+    }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "lookupCustomerDetailsByName",
+        "summary": "Looks up a customer by name query or lists all customers.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "customer_name_query": {
+                    "type": "string",
+                    "description": "The name or partial name of the customer to search for. Omit or provide empty string to get an initial list of customers.",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of matching customers (can be empty).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "matches": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "customer_id": {
+                            "type": "string",
+                            "description": "Unique identifier for the customer."
+                          },
+                          "customer_name": {
+                            "type": "string",
+                            "description": "Full name of the customer."
+                          },
+                          "customer_type": {
+                            "type": "string",
+                            "description": "Type of customer (e.g., Retailer)."
+                          },
+                           "shipping_address": {
+                            "type": "string",
+                            "description": "Shipping address of the customer."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (e.g., malformed JSON).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error during lookup.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

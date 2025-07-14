@@ -1,0 +1,9 @@
+{
+  "name": "b448918f-3323-4b40-b93a-ed68b6c9621b",
+  "displayName": "LogiFreshTool",
+  "description": "https://logifresh-150115724444.us-central1.run.app",
+  "openApiSpec": {
+    "ignoreUnknownFields": true
+  },
+  "toolType": "CUSTOMIZED_TOOL"
+}

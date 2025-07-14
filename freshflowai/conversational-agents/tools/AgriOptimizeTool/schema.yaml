@@ -1,0 +1,411 @@
+openapi: 3.0.0
+info:
+  title: AgriOptimize AI Backend API
+  version: v1.0.0
+  description: API for managing farm operations, harvest logging, quality reporting, and pickup scheduling.
+servers:
+  - url: https://agrioptimize-150115724444.us-central1.run.app
+    description: AgriOptimize Cloud Function Endpoint
+
+# Reusable Schema Components
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+        details:
+          type: string # Or a more structured error object
+          nullable: true
+      required:
+        - status
+        - message
+
+    FarmDetails:
+      type: object
+      properties:
+        farm_name:
+          type: string
+          nullable: true
+        farm_location:
+          type: string
+          nullable: true
+        primary_crops_grown: # Assuming this is an array of strings now in BQ
+          type: array
+          items:
+            type: string
+          nullable: true
+
+    RecentHarvest:
+      type: object
+      properties:
+        harvest_date:
+          type: string
+          format: date
+        harvested_quantity_kg:
+          type: integer
+        quality_score:
+          type: number
+          format: float
+          nullable: true
+        quality_notes:
+          type: string
+          nullable: true
+
+    RecentQCIssue:
+      type: object
+      properties:
+        issue_date:
+          type: string
+          format: date
+        issue_type:
+          type: string
+        severity:
+          type: string
+        notes:
+          type: string
+          nullable: true
+
+    UpcomingSchedule:
+      type: object
+      properties:
+        planned_planting_date:
+          type: string
+          format: date
+          nullable: true
+        planned_harvest_date_estimate:
+          type: string
+          format: date
+        expected_yield_estimate_kg:
+          type: integer
+          nullable: true
+        status:
+          type: string
+
+# API Paths
+paths:
+  /harvest: # Path for the LogNewHarvest playbook
+    post:
+      summary: Log a new harvest record.
+      description: Records details of a new harvest into the system.
+      operationId: logNewHarvest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                farm_id:
+                  type: string
+                  description: ID of the farm where the harvest took place.
+                product_id:
+                  type: string
+                  description: ID of the harvested product.
+                harvested_quantity_kg:
+                  type: integer
+                  description: Quantity harvested in kilograms.
+                harvest_date:
+                  type: string
+                  format: date
+                  description: Date of harvest (YYYY-MM-DD).
+                product_name:
+                  type: string
+                  nullable: true
+                  description: (Optional) Name of the harvested product.
+                category:
+                  type: string
+                  nullable: true
+                  description: (Optional) Category of the product (e.g., 'Vegetables', 'Fruits').
+                estimated_yield_kg:
+                  type: integer
+                  nullable: true
+                  description: (Optional) Estimated yield in kilograms before harvest.
+                quality_score:
+                  type: number
+                  format: float
+                  nullable: true
+                  description: (Optional) Quality score (e.g., on a scale of 1.0 to 5.0).
+                quality_notes:
+                  type: string
+                  nullable: true
+                  description: (Optional) Any notes regarding the quality of the harvest.
+                photos_gcs_path:
+                  type: string
+                  nullable: true
+                  description: (Optional) Google Cloud Storage path to photos of the harvest.
+                planting_date:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: (Optional) Date the crop was planted (YYYY-MM-DD).
+                field_id:
+                  type: string
+                  nullable: true
+                  description: (Optional) Identifier for the specific field or plot.
+              required:
+                - farm_id
+                - product_id
+                - harvested_quantity_kg
+                - harvest_date
+      responses:
+        '200':
+          description: Harvest successfully logged.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  harvest_id:
+                    type: string
+                    format: uuid
+                    description: The unique ID generated for this harvest record.
+                  message:
+                    type: string
+        '400':
+          description: Invalid request (e.g., missing fields, bad data format).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /advice/harvest: # Path for GetHarvestAdvice playbook
+    post:
+      summary: Get harvest advice based on historical data and schedules.
+      description: Retrieves recent harvests, quality issues, and upcoming schedules to help provide advice.
+      operationId: getHarvestAdvice
+      requestBody:
+        required: false # All parameters are optional for broader queries
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                farm_id:
+                  type: string
+                  nullable: true
+                  description: (Optional) ID of the farm to get advice for.
+                product_id:
+                  type: string
+                  nullable: true
+                  description: (Optional) ID of the product to get advice for.
+                start_date:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: (Optional) Start date for historical data (YYYY-MM-DD). Defaults to 90 days ago.
+                end_date:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: (Optional) End date for historical data (YYYY-MM-DD). Defaults to today.
+      responses:
+        '200':
+          description: Harvest advice data retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success" # or "warning" if some data retrieval failed
+                  farm_details:
+                    $ref: '#/components/schemas/FarmDetails'
+                  recent_harvests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RecentHarvest'
+                  recent_qc_issues:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RecentQCIssue'
+                  upcoming_schedules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UpcomingSchedule'
+                  message: # Optional message if status is 'warning'
+                    type: string
+                    nullable: true
+                  details: # Optional details if status is 'warning'
+                    type: string
+                    nullable: true
+        '400':
+          description: Invalid request format.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /issue/farm: # Path for ReportFarmQualityIssue playbook
+    post:
+      summary: Report a farm quality issue.
+      description: Logs a quality control issue observed at the farm.
+      operationId: reportFarmQCIssue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                farm_id:
+                  type: string
+                  description: ID of the farm where the issue was observed.
+                issue_type:
+                  type: string
+                  description: Type of quality issue (e.g., 'Pest Infestation', 'Disease').
+                product_id:
+                  type: string
+                  nullable: true
+                  description: (Optional) ID of the product affected by the issue.
+                issue_date:
+                  type: string
+                  format: date
+                  nullable: true
+                  description: (Optional) Date the issue was observed or reported (YYYY-MM-DD). Defaults to today.
+                affected_quantity_kg:
+                  type: integer
+                  nullable: true
+                  description: (Optional) Estimated quantity affected in kilograms.
+                severity:
+                  type: string
+                  nullable: true
+                  description: (Optional) Severity of the issue (e.g., 'Low', 'Medium', 'High'). Defaults to 'Medium'.
+                reported_by:
+                  type: string
+                  nullable: true
+                  description: (Optional) Person or system reporting the issue. Defaults to 'AI Agent'.
+                notes:
+                  type: string
+                  nullable: true
+                  description: (Optional) Detailed notes about the issue.
+                photos_gcs_path:
+                  type: string
+                  nullable: true
+                  description: (Optional) Google Cloud Storage path to photos of the issue.
+              required:
+                - farm_id
+                - issue_type
+      responses:
+        '200':
+          description: Farm quality issue reported successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  issue_id:
+                    type: string
+                    format: uuid
+                    description: The unique ID generated for this issue record.
+                  message:
+                    type: string
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /schedule/pickup: # Path for ScheduleFarmPickup playbook
+    post:
+      summary: Request a farm pickup for harvested produce.
+      description: Initiates a request to schedule a pickup from a farm, potentially checking availability and notifying logistics.
+      operationId: scheduleFarmPickup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                farm_id:
+                  type: string
+                  description: ID of the farm for the pickup.
+                product_id:
+                  type: string
+                  description: ID of the product to be picked up.
+                quantity_kg:
+                  type: integer
+                  description: Quantity in kilograms to be picked up.
+                requested_date:
+                  type: string
+                  format: date
+                  description: Requested date for the pickup (YYYY-MM-DD).
+              required:
+                - farm_id
+                - product_id
+                - quantity_kg
+                - requested_date
+      responses:
+        '200':
+          description: Pickup request processed. Status indicates if acknowledged or unavailable.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success, unavailable] # Use success if request is acknowledged
+                    description: Indicates if the request was acknowledged ('success') or if the product was unavailable ('unavailable').
+                  details: # Present if status is 'success'
+                    type: object
+                    nullable: true
+                    properties:
+                      request_status:
+                        type: string
+                        example: "Acknowledged"
+                      estimated_pickup_datetime:
+                        type: string
+                        format: date-time # ISO 8601 format
+                      confirmed_quantity_kg:
+                        type: integer
+                      message:
+                        type: string
+                      requires_cold_chain:
+                        type: boolean
+                  message: # Present if status is 'unavailable' or as part of details
+                    type: string
+                    nullable: true
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

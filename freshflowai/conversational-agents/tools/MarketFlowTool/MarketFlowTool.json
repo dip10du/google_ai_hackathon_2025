@@ -1,0 +1,9 @@
+{
+  "name": "570b581d-8253-4daf-b98f-450f40e907d0",
+  "displayName": "MarketFlowTool",
+  "description": "https://marketflow-150115724444.us-central1.run.app",
+  "openApiSpec": {
+    "ignoreUnknownFields": true
+  },
+  "toolType": "CUSTOMIZED_TOOL"
+}

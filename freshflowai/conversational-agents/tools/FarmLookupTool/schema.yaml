@@ -1,0 +1,109 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Farm Lookup API",
+    "version": "1.0.0",
+    "description": "API to lookup farm details by name or location query, or list farms from the BigQuery farm profiles."
+  },
+  "servers": [
+    {
+      "url": "https://getfirmdetails-150115724444.us-central1.run.app"
+    }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "lookupFarmDetailsByQuery",
+        "summary": "Looks up a farm by name or location query or lists all farms.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "farm_name": {
+                    "type": "string",
+                    "description": "The name or location query for the farm. Omit or provide empty string to get an initial list of farms.",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of matching farms (can be empty).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "matches": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "farm_id": {
+                            "type": "string",
+                            "description": "Unique identifier for the farm."
+                          },
+                          "farm_name": {
+                            "type": "string",
+                            "description": "Name of the farm."
+                          },
+                          "farm_location": {
+                            "type": "string",
+                            "description": "Location of the farm."
+                          },
+                          "supplier_name": {
+                            "type": "string",
+                            "description": "Name of the associated supplier."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (e.g., malformed JSON).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error during lookup.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

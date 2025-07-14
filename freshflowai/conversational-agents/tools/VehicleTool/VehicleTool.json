@@ -1,0 +1,9 @@
+{
+  "name": "daa1d4d6-9653-409a-8fee-4bdfb90555fc",
+  "displayName": "VehicleTool",
+  "description": "https://getvehicledetails-150115724444.us-central1.run.app",
+  "openApiSpec": {
+    "ignoreUnknownFields": true
+  },
+  "toolType": "CUSTOMIZED_TOOL"
+}

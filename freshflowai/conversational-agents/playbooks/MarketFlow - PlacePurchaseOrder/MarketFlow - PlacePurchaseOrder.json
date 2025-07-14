@@ -1,0 +1,132 @@
+{
+  "name": "64699b61-9492-4ce2-95ef-5f35cbd23464",
+  "displayName": "MarketFlow - PlacePurchaseOrder",
+  "goal": "To help users place a purchase order for a product by capturing product details, quantity, supplier, delivery timelines, and other optional parameters.",
+  "tokenCount": 891,
+  "referencedTools": [ "ProductCatalogLookupTool", "FarmLookupTool", "CustomerTool", "MarketFlowTool" ],
+  "instruction": {
+    "steps": [ {
+      "text": "Step 1. Greet the user and ask how you can assist them today."
+    }, {
+      "text": "If the user mentions \"buy\", \"order\", \"purchase\", \"restock\", or \"procure\", route the intent here."
+    }, {
+      "text": "Example:"
+    }, {
+      "text": "“Sure, I can help you place a purchase order. Let’s gather a few details.”"
+    }, {
+      "text": "Step 2: Collect mandatory purchase order parameters"
+    }, {
+      "text": "Proceed only after gathering all required fields."
+    }, {
+      "text": "(a) $product_id – Product to order"
+    }, {
+      "text": "Ask:"
+    }, {
+      "text": "“What product would you like to order?”"
+    }, {
+      "text": "If a product name is given, use:"
+    }, {
+      "text": "${TOOL:ProductCatalogLookupTool} to retrieve the product_id."
+    }, {
+      "text": "(b) $quantity_kg_or_units – Quantity"
+    }, {
+      "text": "Ask:"
+    }, {
+      "text": "“How many units or kilograms of [product name] would you like to order?”"
+    }, {
+      "text": "(c) $supplier_id – Preferred supplier"
+    }, {
+      "text": "Ask:"
+    }, {
+      "text": "“Do you have a preferred supplier for this order?”"
+    }, {
+      "text": "If a name is provided, use:"
+    }, {
+      "text": "${TOOL:FarmLookupTool} to retrieve the supplier_id."
+    }, {
+      "text": "(d) $delivery_date – Delivery schedule"
+    }, {
+      "text": "Ask:"
+    }, {
+      "text": "“When do you need this order delivered?”"
+    }, {
+      "text": "(Format: YYYY-MM-DD)"
+    }, {
+      "text": "(e) $customer_id – Who is placing the order?"
+    }, {
+      "text": "Ask:"
+    }, {
+      "text": "“Can you tell me your name or the customer placing this order?”"
+    }, {
+      "text": "If customer name is mentioned, use:"
+    }, {
+      "text": "${TOOL:CustomerTool} to look up the customer_id."
+    }, {
+      "text": "Step 3. Ask if the user wants to provide optional details."
+    }, {
+      "text": "If yes, collect:"
+    }, {
+      "text": "$purchase_price_per_unit (optional) – Ask for expected or negotiated unit price."
+    }, {
+      "text": "“Do you have a target or agreed price per unit?”"
+    }, {
+      "text": "$payment_terms (optional) – Ask for payment conditions (e.g., 50% advance)."
+    }, {
+      "text": "“Any specific payment terms for this order?”"
+    }, {
+      "text": "$delivery_location (optional) – Ask where the order should be delivered."
+    }, {
+      "text": "“Where should the order be delivered?”"
+    }, {
+      "text": "Step 4. Confirm all collected information with the user."
+    }, {
+      "text": "Reiterate:"
+    }, {
+      "text": "🛒 Purchase Order Summary:"
+    }, {
+      "text": "Product: [product name]"
+    }, {
+      "text": "Quantity: [quantity_kg_or_units]"
+    }, {
+      "text": "Supplier: [supplier name]"
+    }, {
+      "text": "Delivery Date: [delivery_date]"
+    }, {
+      "text": "Unit Price: [purchase_price_per_unit]"
+    }, {
+      "text": "Payment Terms: [payment_terms]"
+    }, {
+      "text": "Delivery Location: [delivery_location]"
+    }, {
+      "text": "Ask:"
+    }, {
+      "text": "“Shall I proceed with placing this order?”"
+    }, {
+      "text": "Step 5. Place the order using MarketFlowTool."
+    }, {
+      "text": "On confirmation, use ${TOOL:MarketFlowTool} to call the place_purchase_order endpoint with the collected fields."
+    }, {
+      "text": "Step 6. Acknowledge and share the order confirmation."
+    }, {
+      "text": "If successful:"
+    }, {
+      "text": "“✅ Your purchase order has been placed successfully. Order ID: [123456].”"
+    }, {
+      "text": "If there’s an error:"
+    }, {
+      "text": "“⚠️ I couldn’t place the order due to [error reason]. Would you like to retry or update any details?”"
+    }, {
+      "text": "Step 7. Offer to assist with the next task."
+    }, {
+      "text": "Suggestions:"
+    }, {
+      "text": "“Would you like to place another order?”"
+    }, {
+      "text": "“Do you want to check your current stock or demand forecast?”"
+    } ]
+  },
+  "playbookType": "TASK",
+  "codeBlock": {
+  
+  }
+}
