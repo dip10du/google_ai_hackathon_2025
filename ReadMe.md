@@ -48,12 +48,118 @@ Below is an overview of the key folders included in this repository:
 ```
 freshflowai/
 ├── functions/                # Cloud Functions source code and APIs
+│   ├── deploy_functions.sh   # Automated deployment script for all Cloud Functions
+│   ├── agrioptimize/         # AgriOptimize AI agent
+│   ├── logifresh/            # LogiFresh AI agent
+│   ├── marketflow/           # MarketFlow AI agent
+│   └── ...                   # Other function directories
 ├── bq_tables_schemas/        # BigQuery table schema definitions
 ├── conversational-agents/    # Additional conversational agent logic and configs
+├── DEPLOYMENT_COMMANDS.md    # Manual deployment instructions and commands
 └── ReadMe.md                 # Project documentation (this file)
 ```
 
 Each folder contains a `README.md` with more details about its contents and usage.
+
+## 🚀 Quick Start & Deployment
+
+### Prerequisites
+- Google Cloud Platform account with billing enabled
+- Google Cloud SDK (`gcloud`) installed and configured
+- Python 3.9+ installed locally
+- BigQuery dataset created in your GCP project
+
+### Automated Deployment
+
+FreshFlow AI includes an automated deployment script that deploys all Cloud Functions with a single command:
+
+```bash
+# Navigate to the functions directory
+cd functions
+
+# Make the deployment script executable
+chmod +x deploy_functions.sh
+
+# Configure your project settings
+# Edit deploy_functions.sh and update:
+# - PROJECT_ID: Your Google Cloud project ID
+# - REGION: Deployment region (default: us-central1)
+# - DATASET_ID: BigQuery dataset name
+
+# Deploy all functions
+./deploy_functions.sh
+```
+
+### What Gets Deployed
+
+The `deploy_functions.sh` script automatically deploys all 9 Cloud Functions that power the FreshFlow AI system:
+
+**Core Agent Functions:**
+- `freshflow-agrioptimize` - Farm operations and harvest management
+- `freshflow-logifresh` - Logistics and cold chain management  
+- `freshflow-marketflow` - Market intelligence and demand forecasting
+
+**Lookup Services:**
+- `freshflow-getcustomerdetails` - Customer data retrieval
+- `freshflow-getfirmdetails` - Farm profile information
+- `freshflow-getproduct` - Product catalog queries
+- `freshflow-getvehicledetails` - Vehicle fleet information
+
+**Specialized Operations:**
+- `freshflow-getoptimizedeliveryroute` - Route optimization
+- `freshflow-reportcoldchainissue` - Cold chain alert processing (Pub/Sub triggered)
+
+### Verification
+
+After deployment, verify your functions are working:
+
+```bash
+# List deployed functions
+gcloud functions list --filter="name:freshflow-*"
+
+# Test a function (health check)
+curl https://REGION-PROJECT_ID.cloudfunctions.net/freshflow-agrioptimize
+
+# Expected response: {"status": "success", "message": "AgriOptimize AI Backend is running!"}
+```
+
+### Manual Deployment
+
+For individual function deployment or troubleshooting, refer to the [`DEPLOYMENT_COMMANDS.md`](DEPLOYMENT_COMMANDS.md) file for detailed manual deployment instructions.
+
+## 🔧 Configuration
+
+Before deployment, ensure you have:
+
+1. **Google Cloud Project Setup:**
+   - Project ID configured in `deploy_functions.sh`
+   - Required APIs enabled (Cloud Functions, BigQuery, Pub/Sub)
+   - Service accounts with appropriate permissions
+
+2. **BigQuery Dataset:**
+   - Dataset created in your project
+   - Tables created using schemas from `bq_tables_schemas/`
+
+3. **Environment Variables:**
+   - `GCP_PROJECT`: Your Google Cloud project ID
+   - `BQ_DATASET`: BigQuery dataset name
+
+## 📖 API Documentation
+
+Each deployed Cloud Function provides RESTful APIs with action-based routing. Operations are specified via JSON request bodies.
+
+Example API call:
+```bash
+curl -X POST https://REGION-PROJECT.cloudfunctions.net/freshflow-agrioptimize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "log_harvest",
+    "farm_id": "FARM123",
+    "product_id": "TOMATO001",
+    "harvested_quantity_kg": 500,
+    "harvest_date": "2025-08-21"
+  }'
+```
 
 ## Contributing
 
