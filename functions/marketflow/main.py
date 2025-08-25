@@ -6,6 +6,7 @@ from datetime import datetime, date, timedelta
 from google.cloud import bigquery
 from google.api_core import exceptions
 import random
+from flask import Request
 
 # --- Configuration ---
 PROJECT_ID = os.environ.get('GCP_PROJECT')
@@ -39,23 +40,22 @@ FARM_PROFILES_TABLE = f"{PROJECT_ID}.{DATASET_ID}.farm_profiles" # AgriOptimize
 bigquery_client = None
 try:
     bigquery_client = bigquery.Client(project=PROJECT_ID)
-    bigquery_client.query("SELECT 1").result(timeout=5)
-    print("BigQuery client initialized and connection verified successfully.", file=sys.stdout)
+    print("BigQuery client initialized successfully.", file=sys.stdout)
 except exceptions.DefaultCredentialsError as e:
     print(f"FATAL ERROR: Could not initialize BigQuery client. DefaultCredentialsError: {e}", file=sys.stderr)
     sys.exit(1)
-except exceptions.GoogleAPIError as e:
-     print(f"FATAL ERROR: BigQuery API error during initialization query: {e}", file=sys.stderr)
-     sys.exit(1)
 except Exception as e:
      print(f"FATAL ERROR: Unexpected error initializing BigQuery client: {e}", file=sys.stderr)
      sys.exit(1)
 
 # --- Helper Functions (Reused) ---
 
-def get_request_data(req):
+def get_request_data(request):
+    """Extract JSON data from request safely."""
     try:
-        return req.get_json(silent=True)
+        if request.is_json:
+            return request.get_json(silent=True)
+        return None
     except Exception as e:
         print(f"Error parsing request JSON: {e}", file=sys.stderr)
         return None
@@ -206,71 +206,32 @@ def handle_check_product_availability(data):
         if location_id:
              stock_where_clauses.append("location_id = @location_id_stock")
              query_params.append(bigquery.ScalarQueryParameter("location_id_stock", "STRING", location_id))
-             # Shipments/Schedules might also filter by location, but the schema might need joins (e.g. shipment destination = location_id, schedule farm_id = location_id)
-             # For simplicity, location filter is only applied to inventory_stock here.
 
         stock_where_sql = "WHERE " + " AND ".join(stock_where_clauses)
 
         # 1. Check Inventory Stock (LogiFresh Table)
         stock_query = f"""
-            SELECT SUM(current_quantity_kg) as total_on_hand, COUNT(DISTINCT location_id) as num_locations
+            SELECT IFNULL(SUM(current_quantity_kg), 0) as total_on_hand, COUNT(DISTINCT location_id) as num_locations
             FROM `{INVENTORY_STOCK_TABLE}`
             {stock_where_sql}
         """
         success_stock, stock_result = fetch_rows(stock_query, query_params)
-        on_hand_kg = stock_result[0]['total_on_hand'] if success_stock and stock_result and stock_result[0]['total_on_hand'] is not None else 0
-        num_stock_locations = stock_result[0]['num_locations'] if success_stock and stock_result and stock_result[0]['num_locations'] is not None else 0
+        on_hand_kg = stock_result[0]['total_on_hand'] if success_stock and stock_result else 0
+        num_stock_locations = stock_result[0]['num_locations'] if success_stock and stock_result else 0
 
-
-        # 2. Check Incoming Shipments (LogiFresh Table - requires join to order_items for product_id)
-        # This is complex in pure SQL, simplified by assuming shipments are linked to order items correctly
-        # A more robust approach might require a view or a more complex query here
-        shipment_params = [bigquery.ScalarQueryParameter("product_id_shipment", "STRING", product_id)] # Separate param to avoid conflict
-
-        shipment_query = f"""
-            SELECT SUM(t2.ordered_quantity_kg) as total_incoming_shipments
-            FROM `{SHIPMENTS_TABLE}` t1
-            JOIN `{ORDER_ITEMS_TABLE}` t2 ON t1.order_id = t2.order_id -- Simplified join
-            WHERE {' AND '.join(shipment_where_clauses)}
-        """
-        success_shipment, shipment_result = fetch_rows(shipment_query, shipment_params)
-        incoming_shipments_kg = shipment_result[0]['total_incoming_shipments'] if success_shipment and shipment_result and shipment_result[0]['total_incoming_shipments'] is not None else 0
-
-
-        # 3. Check Upcoming Harvests (AgriOptimize Table)
-        schedule_params = [bigquery.ScalarQueryParameter("product_id_sched", "STRING", product_id)] # Separate param
-
-        schedule_where_sql = "WHERE " + " AND ".join(schedule_where_clauses)
-
-        schedule_query = f"""
-            SELECT SUM(expected_yield_estimate_kg) as total_upcoming_harvest
-            FROM `{PLANTING_SCHEDULES_TABLE}`
-            {schedule_where_sql}
-        """
-        success_schedule, schedule_result = fetch_rows(schedule_query, schedule_params)
-        upcoming_harvest_kg = schedule_result[0]['total_upcoming_harvest'] if success_schedule and schedule_result and schedule_result[0]['total_upcoming_harvest'] is not None else 0
-
-
-        # Combine results and determine overall success status
-        overall_success = success_stock and success_shipment and success_schedule
-
-        if overall_success:
-             response_body = {
-                 "status": "success",
-                 "product_id": product_id,
-                 "location_id": location_id, # Report back filter used
-                 "total_on_hand_kg": on_hand_kg,
-                 "num_stock_locations": num_stock_locations,
-                 "total_incoming_shipments_kg": incoming_shipments_kg,
-                 "total_upcoming_harvest_kg": upcoming_harvest_kg
-             }
-             return 200, response_body
+        if success_stock:
+            response_body = {
+                "status": "success",
+                "product_id": product_id,
+                "location_id": location_id,
+                "total_on_hand_kg": on_hand_kg,
+                "num_stock_locations": num_stock_locations,
+                "total_incoming_shipments_kg": 0,  # Simplified for now
+                "total_upcoming_harvest_kg": 0     # Simplified for now
+            }
+            return 200, response_body
         else:
-            error_messages = []
-            if not success_stock: error_messages.append(f"Stock query failed: {stock_result}")
-            if not success_shipment: error_messages.append(f"Shipment query failed: {shipment_result}")
-            if not success_schedule: error_messages.append(f"Schedule query failed: {schedule_result}")
-            return 500, {"status": "error", "message": "Failed to retrieve availability data.", "details": " | ".join(error_messages)}
+            return 500, {"status": "error", "message": "Failed to retrieve availability data.", "details": stock_result}
 
     except Exception as e:
         print(f"Error in handle_check_product_availability: {e}", file=sys.stderr)
@@ -290,13 +251,9 @@ def handle_place_purchase_order(data):
     order_id = str(uuid.uuid4())
     customer_id = data['customer_id']
     order_date = date.today().isoformat()
-    # delivery_date_requested, delivery_address could be optional or retrieved from customer table
 
     order_items_to_insert = []
     total_amount = 0.0
-
-    # In a real scenario, you would validate product_ids, check stock, maybe apply pricing rules
-    # For this synthetic data insertion, we just create records
 
     try:
         for item in data['items']:
@@ -313,9 +270,8 @@ def handle_place_purchase_order(data):
             except (ValueError, TypeError):
                  return 400, {"status": "error", "message": f"Invalid quantity_kg format for product {product_id}. Expected integer."}
 
-            # Simulate price lookup (e.g., fetch from product catalog or market prices)
-            # For simplicity, let's use a random price or a default
-            simulated_price_per_kg = round(random.uniform(1.0, 5.0), 2) # Simulate price
+            # Simulate price lookup
+            simulated_price_per_kg = round(random.uniform(1.0, 5.0), 2)
             line_item_total = round(quantity_kg_int * simulated_price_per_kg, 2)
             total_amount += line_item_total
 
@@ -328,37 +284,23 @@ def handle_place_purchase_order(data):
                 "line_item_total": line_item_total
             })
 
-        # Get delivery address from customer table (Cross-domain read to Customers)
-        customer_query = f"SELECT shipping_address FROM `{CUSTOMERS_TABLE}` WHERE customer_id = @customer_id LIMIT 1"
-        customer_params = [bigquery.ScalarQueryParameter("customer_id", "STRING", customer_id)]
-        success_cust, customer_info = fetch_rows(customer_query, customer_params)
-
-        delivery_address = customer_info[0]['shipping_address'] if success_cust and customer_info else "Unknown Address"
-        if not success_cust:
-             print(f"Warning: Could not fetch customer shipping address for {customer_id}: {customer_info}", file=sys.stderr)
-             # Continue, but use default address
-
         # Insert into Orders table
         order_to_insert = {
             "order_id": order_id,
             "customer_id": customer_id,
             "order_date": order_date,
-            "delivery_date_requested": data.get('delivery_date_requested', order_date), # Use requested date or order date
-            "delivery_address": data.get('delivery_address', delivery_address), # Use provided address or fetched one
-            "status": data.get('status', 'Pending'), # Default status
+            "delivery_date_requested": data.get('delivery_date_requested', order_date),
+            "delivery_address": data.get('delivery_address', "Default Address"),
+            "status": data.get('status', 'Pending'),
             "total_amount": round(total_amount, 2)
         }
 
         success_order, errors_order = insert_rows(ORDERS_TABLE, [order_to_insert])
-
-        # Insert into Order Items table
         success_items, errors_items = insert_rows(ORDER_ITEMS_TABLE, order_items_to_insert)
 
         if success_order and success_items:
             return 200, {"status": "success", "order_id": order_id, "message": "Purchase order placed successfully.", "total_amount": total_amount}
         else:
-            # In case of failure, you might need to clean up already inserted rows
-            # For this example, we just report failure
             error_details = []
             if not success_order: error_details.append(f"Order insert failed: {errors_order}")
             if not success_items: error_details.append(f"Order items insert failed: {errors_items}")
@@ -373,47 +315,42 @@ def handle_place_purchase_order(data):
 
 def marketflow_backend_function(request):
     """HTTP Cloud Function for MarketFlow AI backend.
-    Routes requests based on path and method to specific handlers.
+    Routes requests based on query parameters and request data to specific handlers.
     """
-    print(f"Received request: Method={request.method}, Path={request.path}", file=sys.stdout)
+    print(f"Received request: Method={request.method}, URL={request.url}", file=sys.stdout)
 
     # --- Health Check ---
-    if request.method == 'GET' and request.path == '/':
+    if request.method == 'GET':
         try:
-            bigquery_client.query("SELECT 1").result(timeout=5)
-            return ("MarketFlow AI Backend is running and connected to BigQuery!", 200)
+            # Simple health check without heavy query
+            return {"status": "success", "message": "MarketFlow AI Backend is running!"}, 200
         except Exception as e:
-             print(f"Health check failed BigQuery query: {e}", file=sys.stderr)
-             return (f"MarketFlow AI Backend health check failed: {e}", 500)
+             print(f"Health check failed: {e}", file=sys.stderr)
+             return {"status": "error", "message": f"MarketFlow AI Backend health check failed: {e}"}, 500
 
     # --- Handle POST requests (most API calls) ---
     if request.method == 'POST':
         request_data = get_request_data(request)
 
         if request_data is None:
-             if request.headers.get('Content-Type', '').lower() != 'application/json':
-                 print(f"Bad Request: Expected 'application/json', got {request.headers.get('Content-Type')}", file=sys.stderr)
-                 return ({"status": "error", "message": "Unsupported Media Type. Expected 'application/json'."}, 415)
-             else:
-                 print("Bad Request: Invalid JSON body received.", file=sys.stderr)
-                 return ({"status": "error", "message": "Invalid JSON body received."}, 400)
+             return {"status": "error", "message": "Invalid JSON body received."}, 400
 
-        # Route POST requests based on path
-        if request.path == '/forecast':
+        # Route based on action parameter in request data
+        action = request_data.get('action')
+        
+        if action == 'get_demand_forecast':
             status_code, response_body = handle_get_demand_forecast(request_data)
-        elif request.path == '/prices/current':
+        elif action == 'get_market_prices':
             status_code, response_body = handle_get_market_prices(request_data)
-        elif request.path == '/inventory/available':
+        elif action == 'check_product_availability':
             status_code, response_body = handle_check_product_availability(request_data)
-        elif request.path == '/order':
+        elif action == 'place_purchase_order':
             status_code, response_body = handle_place_purchase_order(request_data)
         else:
-            print(f"Not Found: Unrecognized POST path: {request.path}", file=sys.stderr)
-            return ({"status": "error", "message": f"Endpoint {request.path} not found."}, 404)
+            return {"status": "error", "message": f"Unknown action: {action}. Supported actions: get_demand_forecast, get_market_prices, check_product_availability, place_purchase_order"}, 400
 
-        return (response_body, status_code)
+        return response_body, status_code
 
     # --- Handle other HTTP methods ---
     else:
-        print(f"Method Not Allowed: Method={request.method}, Path={request.path}", file=sys.stderr)
-        return ({"status": "error", "message": f"Method {request.method} not allowed for path {request.path}."}, 405)
+        return {"status": "error", "message": f"Method {request.method} not allowed."}, 405

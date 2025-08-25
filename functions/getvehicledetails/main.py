@@ -1,3 +1,4 @@
+import sys
 import functions_framework
 import json
 from google.cloud import bigquery
@@ -7,9 +8,17 @@ import os # Import os to read secrets
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# BigQuery Configuration
-PROJECT_ID = 'laeswdm-agbgagenticaihackat'
-DATASET_ID = 'agriculture'
+# --- Configuration ---
+PROJECT_ID = os.environ.get('GCP_PROJECT')
+DATASET_ID = os.environ.get('BQ_DATASET')
+
+if not PROJECT_ID:
+    print("FATAL ERROR: GCP_PROJECT environment variable not set. Exiting.", file=sys.stderr)
+    sys.exit(1)
+if not DATASET_ID:
+    print("FATAL ERROR: BQ_DATASET environment variable not set. Exiting.", file=sys.stderr)
+    sys.exit(1)
+
 TABLE_ID = 'vehicles'
 BIGQUERY_TABLE = f'{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}'
 

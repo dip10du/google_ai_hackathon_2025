@@ -10,8 +10,16 @@ import random
 # --- Configuration ---
 # Get PROJECT_ID and DATASET_ID from environment variables
 # In Cloud Functions, these MUST be set via --set-env-vars
-PROJECT_ID = "laeswdm-agbgagenticaihackat"
-DATASET_ID = "agriculture"
+# --- Configuration ---
+PROJECT_ID = os.environ.get('GCP_PROJECT')
+DATASET_ID = os.environ.get('BQ_DATASET')
+
+if not PROJECT_ID:
+    print("FATAL ERROR: GCP_PROJECT environment variable not set. Exiting.", file=sys.stderr)
+    sys.exit(1)
+if not DATASET_ID:
+    print("FATAL ERROR: BQ_DATASET environment variable not set. Exiting.", file=sys.stderr)
+    sys.exit(1)
 
 # Exit immediately if essential environment variables are NOT set
 # Cloud Functions will log this and the function instance will fail to start

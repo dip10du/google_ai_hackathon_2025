@@ -5,16 +5,13 @@ import uuid
 from datetime import datetime, date, timedelta
 from google.cloud import bigquery
 from google.api_core import exceptions
-import random # Needed for schedule pickup simulation
+import random
+from flask import Request
 
 # --- Configuration ---
-# Get PROJECT_ID and DATASET_ID from environment variables
-# In Cloud Functions, these MUST be set via --set-env-vars
 PROJECT_ID = os.environ.get('GCP_PROJECT')
 DATASET_ID = os.environ.get('BQ_DATASET')
 
-# Exit immediately if essential environment variables are NOT set
-# Cloud Functions will log this and the function instance will fail to start
 if not PROJECT_ID:
     print("FATAL ERROR: GCP_PROJECT environment variable not set. Exiting.", file=sys.stderr)
     sys.exit(1)
@@ -30,34 +27,35 @@ HARVEST_RECORDS_TABLE = f"{PROJECT_ID}.{DATASET_ID}.harvest_records"
 FARM_QC_ISSUES_TABLE = f"{PROJECT_ID}.{DATASET_ID}.farm_qc_issues"
 PLANTING_SCHEDULES_TABLE = f"{PROJECT_ID}.{DATASET_ID}.planting_schedules"
 
-# Initialize BigQuery client - done outside the main function handler
-# Runs during cold start
+# Initialize BigQuery client
 bigquery_client = None
 try:
     bigquery_client = bigquery.Client(project=PROJECT_ID)
-    # Optional: Run a tiny query to verify connection early
-    bigquery_client.query("SELECT 1").result(timeout=5)
-    print("BigQuery client initialized and connection verified successfully.", file=sys.stdout)
+    print("BigQuery client initialized successfully.", file=sys.stdout)
 except exceptions.DefaultCredentialsError as e:
     print(f"FATAL ERROR: Could not initialize BigQuery client. DefaultCredentialsError: {e}", file=sys.stderr)
-    sys.exit(1) # Exit if cannot connect to BQ (credentials issue)
-except exceptions.GoogleAPIError as e:
-     print(f"FATAL ERROR: BigQuery API error during initialization query: {e}", file=sys.stderr)
-     sys.exit(1) # Exit if BQ API fails on init (permissions, network, etc.)
+    sys.exit(1)
 except Exception as e:
      print(f"FATAL ERROR: Unexpected error initializing BigQuery client: {e}", file=sys.stderr)
      sys.exit(1)
 
-# --- BigQuery Helper Functions ---
+# --- Helper Functions ---
+
+def get_request_data(request):
+    """Extract JSON data from request safely."""
+    try:
+        if request.is_json:
+            return request.get_json(silent=True)
+        return None
+    except Exception as e:
+        print(f"Error parsing request JSON: {e}", file=sys.stderr)
+        return None
 
 def insert_rows(table_id, rows_json):
-    # No need for client/env var checks here, done at startup
     try:
         errors = bigquery_client.insert_rows_json(table_id, rows_json)
         if errors:
             print(f"BigQuery insert errors for {table_id}: {errors}", file=sys.stderr)
-            # Return details of the first error for simplicity
-            # errors is a list of dicts, e.g., [{'index': 0, 'errors': [{'reason': 'invalid', 'message': '...'}]}]
             return False, errors[0].get('errors', [{'message': 'Unknown insert error'}])[0].get('message', 'Unknown error details')
         return True, None
     except exceptions.NotFound as e:
@@ -71,11 +69,10 @@ def insert_rows(table_id, rows_json):
         return False, str(e)
 
 def fetch_rows(query, query_params=None):
-    # No need for client/env var checks here, done at startup
     try:
         job_config = bigquery.QueryJobConfig(query_parameters=query_params) if query_params else None
         query_job = bigquery_client.query(query, job_config=job_config)
-        results = [dict(row) for row in query_job.result()] # Convert results to list of dicts
+        results = [dict(row) for row in query_job.result()]
         return True, results
     except exceptions.NotFound as e:
          print(f"BigQuery table not found during query. Error: {e}", file=sys.stderr)
@@ -87,12 +84,9 @@ def fetch_rows(query, query_params=None):
         print(f"Unexpected error during BigQuery query: {e}", file=sys.stderr)
         return False, str(e)
 
-
-# --- Request Handler Functions (Business Logic) ---
-# These functions contain the logic for each endpoint and return (status_code, response_dict)
+# --- Request Handler Functions ---
 
 def handle_log_harvest(data):
-    # Log New Harvest logic
     required_fields = ['farm_id', 'product_id', 'harvested_quantity_kg', 'harvest_date']
     if not data or not all(field in data for field in required_fields):
         missing = [field for field in required_fields if not data or field not in data]
@@ -113,7 +107,7 @@ def handle_log_harvest(data):
             "product_name": data.get('product_name'),
             "category": data.get('category'),
             "harvest_date": harvest_date_iso,
-            "harvested_quantity_kg": data.get('harvested_quantity_kg'), # Will convert below
+            "harvested_quantity_kg": data.get('harvested_quantity_kg'),
             "estimated_yield_kg": data.get('estimated_yield_kg'),
             "quality_score": data.get('quality_score'),
             "quality_notes": data.get('quality_notes', ''),
@@ -122,7 +116,6 @@ def handle_log_harvest(data):
             "field_id": data.get('field_id')
         }
 
-        # Ensure INT/FLOAT fields are converted if present
         try:
             row_to_insert['harvested_quantity_kg'] = int(row_to_insert['harvested_quantity_kg'])
         except (ValueError, TypeError):
@@ -135,9 +128,8 @@ def handle_log_harvest(data):
              try: row_to_insert['quality_score'] = float(row_to_insert['quality_score'])
              except (ValueError, TypeError): return 400, {"status": "error", "message": "Invalid format for quality_score. Expected number."}
         if 'planting_date' in row_to_insert and row_to_insert['planting_date'] is not None:
-             try: datetime.strptime(row_to_insert['planting_date'], '%Y-%m-%d').date().isoformat() # Validate format
+             try: datetime.strptime(row_to_insert['planting_date'], '%Y-%m-%d').date().isoformat()
              except (ValueError, TypeError): return 400, {"status": "error", "message": "Invalid planting_date format. Expected YYYY-MM-DD."}
-
 
         success, errors = insert_rows(HARVEST_RECORDS_TABLE, [row_to_insert])
 
@@ -150,23 +142,19 @@ def handle_log_harvest(data):
         print(f"Error in handle_log_harvest: {e}", file=sys.stderr)
         return 500, {"status": "error", "message": "An internal error occurred."}
 
-
 def handle_get_harvest_advice(data):
-    # Get Harvest Advice logic
     farm_id = data.get('farm_id')
     product_id = data.get('product_id')
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
 
     try:
-        # Build query parameters and where clauses dynamically
-        # Ensure parameter names are unique across queries if same name is used for different values/tables
         harvest_params = []
         harvest_where_clauses = []
         qc_params = []
         qc_where_clauses = []
         schedule_params = []
-        schedule_where_clauses = ["planned_harvest_date_estimate >= CURRENT_DATE()"] # Schedules only look forward
+        schedule_where_clauses = ["planned_harvest_date_estimate >= CURRENT_DATE()"]
 
         if farm_id:
              harvest_where_clauses.append("farm_id = @farm_id_h")
@@ -179,12 +167,11 @@ def handle_get_harvest_advice(data):
         if product_id:
              harvest_where_clauses.append("product_id = @product_id_h")
              harvest_params.append(bigquery.ScalarQueryParameter("product_id_h", "STRING", product_id))
-             qc_where_clauses.append("(product_id IS NULL OR product_id = @product_id_qc)") # QC can be general
+             qc_where_clauses.append("(product_id IS NULL OR product_id = @product_id_qc)")
              qc_params.append(bigquery.ScalarQueryParameter("product_id_qc", "STRING", product_id))
              schedule_where_clauses.append("product_id = @product_id_sched")
              schedule_params.append(bigquery.ScalarQueryParameter("product_id_sched", "STRING", product_id))
 
-        # Handle date parameters for Harvest/QC (same logic)
         date_params = []
         if start_date_str and end_date_str:
              date_params.append(bigquery.ScalarQueryParameter("start_date", "DATE", start_date_str))
@@ -199,20 +186,18 @@ def handle_get_harvest_advice(data):
              date_params.append(bigquery.ScalarQueryParameter("end_date", "DATE", end_date_str))
              harvest_where_clauses.append("harvest_date <= @end_date")
              qc_where_clauses.append("issue_date <= @end_date")
-        else: # Default to last 90 days if no dates specified
+        else:
              harvest_where_clauses.append("harvest_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)")
              qc_where_clauses.append("issue_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)")
 
-        harvest_params.extend(date_params) # Add date params to harvest query
-        qc_params.extend(date_params) # Add date params to QC query
-
+        harvest_params.extend(date_params)
+        qc_params.extend(date_params)
 
         harvest_where_sql = "WHERE " + " AND ".join(harvest_where_clauses) if harvest_where_clauses else ""
         qc_where_sql = "WHERE " + " AND ".join(qc_where_clauses) if qc_where_clauses else ""
         schedule_where_sql = "WHERE " + " AND ".join(schedule_where_clauses)
 
-
-        # 1. Get recent Harvest Records
+        # Get recent Harvest Records
         harvest_query = f"""
             SELECT harvest_date, harvested_quantity_kg, quality_score, quality_notes
             FROM `{HARVEST_RECORDS_TABLE}`
@@ -222,7 +207,7 @@ def handle_get_harvest_advice(data):
         """
         success_h, harvests = fetch_rows(harvest_query, harvest_params)
 
-        # 2. Get recent QC Issues
+        # Get recent QC Issues
         qc_query = f"""
             SELECT issue_date, issue_type, severity, notes
             FROM `{FARM_QC_ISSUES_TABLE}`
@@ -232,7 +217,7 @@ def handle_get_harvest_advice(data):
         """
         success_q, qc_issues = fetch_rows(qc_query, qc_params)
 
-        # 3. Get upcoming Planting Schedules (only future dates)
+        # Get upcoming Planting Schedules
         schedule_query = f"""
             SELECT planned_planting_date, planned_harvest_date_estimate, expected_yield_estimate_kg, status
             FROM `{PLANTING_SCHEDULES_TABLE}`
@@ -242,7 +227,7 @@ def handle_get_harvest_advice(data):
         """
         success_s, schedules = fetch_rows(schedule_query, schedule_params)
 
-        # 4. Get Farm Profile details (only if farm_id is provided)
+        # Get Farm Profile details
         farm_details = {}
         success_f = True
         if farm_id:
@@ -255,15 +240,13 @@ def handle_get_harvest_advice(data):
             farm_params = [bigquery.ScalarQueryParameter("farm_id_f", "STRING", farm_id)]
             success_f, farm_info = fetch_rows(farm_query, farm_params)
             farm_details = farm_info[0] if (success_f and farm_info) else {}
-        # Note: Skipping complex logic to find farms by product name for simplicity
 
-        # Combine results and determine overall success status
         overall_success = success_h and success_q and success_s and success_f
 
         if overall_success:
              return 200, {
                  "status": "success",
-                 "farm_details": farm_details, # Empty if no farm_id provided
+                 "farm_details": farm_details,
                  "recent_harvests": harvests,
                  "recent_qc_issues": qc_issues,
                  "upcoming_schedules": schedules
@@ -274,8 +257,7 @@ def handle_get_harvest_advice(data):
             if not success_q: error_messages.append(f"QC query failed: {qc_issues}")
             if not success_s: error_messages.append(f"Schedule query failed: {schedules}")
             if not success_f and farm_id: error_messages.append(f"Farm query failed: {farm_info}")
-            # Return 200 even on partial failure if data was found for some queries
-            # The AI should handle cases where some data is missing
+            
             status_code = 200 if (harvests or qc_issues or schedules or farm_details) else 500
             return status_code, {"status": "warning" if status_code == 200 else "error",
                                  "message": "Data retrieval issues encountered." if status_code == 200 else "Failed to retrieve data for advice.",
@@ -283,16 +265,13 @@ def handle_get_harvest_advice(data):
                                  "farm_details": farm_details,
                                  "recent_harvests": harvests,
                                  "recent_qc_issues": qc_issues,
-                                 "upcoming_schedules": schedules} # Return partial data
-
+                                 "upcoming_schedules": schedules}
 
     except Exception as e:
         print(f"Error in handle_get_harvest_advice: {e}", file=sys.stderr)
         return 500, {"status": "error", "message": "An internal error occurred while getting advice."}
 
-
 def handle_report_farm_qc_issue(data):
-    # Report Farm Quality Issue logic
     required_fields = ['farm_id', 'issue_type']
     if not data or not all(field in data for field in required_fields):
         missing = [field for field in required_fields if not data or field not in data]
@@ -322,7 +301,6 @@ def handle_report_farm_qc_issue(data):
         if 'affected_quantity_kg' in row_to_insert and row_to_insert['affected_quantity_kg'] is not None:
             try: row_to_insert['affected_quantity_kg'] = int(row_to_insert['affected_quantity_kg'])
             except (ValueError, TypeError): return 400, {"status": "error", "message": "Invalid format for affected_quantity_kg. Expected integer."}
-        # severity is STRING, reported_by is STRING, notes is STRING, photos_gcs_path is STRING - no conversion needed unless specific validation required
 
         success, errors = insert_rows(FARM_QC_ISSUES_TABLE, [row_to_insert])
 
@@ -335,9 +313,7 @@ def handle_report_farm_qc_issue(data):
         print(f"Error in handle_report_farm_qc_issue: {e}", file=sys.stderr)
         return 500, {"status": "error", "message": "An internal error occurred."}
 
-
 def handle_schedule_farm_pickup(data):
-    # Schedule Farm Pickup logic
     required_fields = ['farm_id', 'product_id', 'quantity_kg', 'requested_date']
     if not data or not all(field in data for field in required_fields):
         missing = [field for field in required_fields if not data or field not in data]
@@ -360,9 +336,7 @@ def handle_schedule_farm_pickup(data):
         farm_id = data['farm_id']
         product_id = data['product_id']
 
-        # --- Real Scenario Step 1: Verify Availability ---
-        # Query harvest_records or inventory_stock for available quantity at the farm
-        # This assumes harvested quantity in the last 7 days is 'available for pickup'
+        # Check availability
         availability_query = f"""
             SELECT SUM(harvested_quantity_kg) as total_harvested
             FROM `{HARVEST_RECORDS_TABLE}`
@@ -382,9 +356,7 @@ def handle_schedule_farm_pickup(data):
 
         is_available_for_pickup = available_kg >= quantity_kg_int
 
-        # --- Simulate Step 2: Interaction with Logistics (Simplified) ---
         if is_available_for_pickup:
-             # Simulate interaction with logistics - generate a likely pickup time
              estimated_pickup_datetime = datetime.combine(requested_date_obj, datetime.min.time()) + timedelta(days=random.randint(0,2), hours=random.randint(8,16), minutes=random.randint(0,59))
 
              pickup_confirmation = {
@@ -392,91 +364,55 @@ def handle_schedule_farm_pickup(data):
                 "estimated_pickup_datetime": estimated_pickup_datetime.isoformat(),
                 "confirmed_quantity_kg": quantity_kg_int,
                 "message": "Pickup request received and appears feasible. Logistics is being notified and will confirm exact details.",
-                "requires_cold_chain": (random.random() < 0.9) # Simulate based on random chance
+                "requires_cold_chain": (random.random() < 0.9)
              }
              return 200, {"status": "success", "details": pickup_confirmation}
         else:
-             # Not enough quantity found recently harvested
              return 200, {"status": "unavailable", "message": f"Unable to schedule pickup for {quantity_kg_int} kg. Only found approximately {available_kg} kg recently harvested or on hand for this product at this farm. Please adjust quantity or date."}
-
 
     except Exception as e:
         print(f"Error in handle_schedule_farm_pickup: {e}", file=sys.stderr)
         return 500, {"status": "error", "message": "An internal error occurred while processing pickup request."}
 
-
 # --- Main Cloud Function Entry Point ---
 
-# This function will be triggered by HTTP requests
-# The function name you deploy as is the entry point
-# E.g., if you deploy with --entry-point=agrioptimize_backend_function, this function runs
 def agrioptimize_backend_function(request):
     """HTTP Cloud Function for AgriOptimize AI backend.
-    Routes requests based on path and method to specific handlers.
-
-    Args:
-        request (flask.Request): The request object.
-        <http://flask.pocoo.org/docs/1.0/api/#flask.Request>
-    Returns:
-        The response according to the CORS specification,
-        with the HTTP status code, and the response body as JSON.
+    Routes requests based on action parameter in JSON body.
     """
-    print(f"Received request: Method={request.method}, Path={request.path}", file=sys.stdout)
+    print(f"Received request: Method={request.method}, URL={request.url}", file=sys.stdout)
 
     # --- Health Check ---
-    if request.method == 'GET' and request.path == '/':
-        # Reuse health check logic
+    if request.method == 'GET':
         try:
-            if bigquery_client:
-                 bigquery_client.query("SELECT 1").result(timeout=5)
-                 return ("AgriOptimize AI Backend is running and connected to BigQuery!", 200)
-            else:
-                 return ("AgriOptimize AI Backend is running, but BigQuery client not initialized.", 500)
+            return {"status": "success", "message": "AgriOptimize AI Backend is running!"}, 200
         except Exception as e:
-             print(f"Health check failed BigQuery query: {e}", file=sys.stderr)
-             return (f"AgriOptimize AI Backend health check failed: {e}", 500)
+             print(f"Health check failed: {e}", file=sys.stderr)
+             return {"status": "error", "message": f"AgriOptimize AI Backend health check failed: {e}"}, 500
 
-
-    # --- Handle POST requests (most API calls) ---
+    # --- Handle POST requests ---
     if request.method == 'POST':
-        # request.get_json() is provided by the Cloud Functions request object
-        # It handles reading the body and parsing JSON.
-        request_data = request.get_json(silent=True) # silent=True prevents hard crash on bad JSON
+        request_data = get_request_data(request)
 
         if request_data is None:
-            # This handles cases where Content-Type is application/json but body is not valid JSON
-            # Or Content-Type is missing/incorrect for JSON.
-            if request.headers.get('Content-Type', '').lower() != 'application/json':
-                print(f"Bad Request: Expected 'application/json', got {request.headers.get('Content-Type')}", file=sys.stderr)
-                return ({"status": "error", "message": "Unsupported Media Type. Expected 'application/json'."}, 415)
-            else: # Content-Type is JSON but body is invalid JSON
-                 print("Bad Request: Invalid JSON body received.", file=sys.stderr)
-                 return ({"status": "error", "message": "Invalid JSON body received."}, 400)
+             return {"status": "error", "message": "Invalid JSON body received."}, 400
 
-
-        # Route POST requests based on path
-        if request.path == '/harvest':
+        # Route based on action parameter in request data
+        action = request_data.get('action')
+        
+        if action == 'log_harvest':
             status_code, response_body = handle_log_harvest(request_data)
-        elif request.path == '/advice/harvest':
+        elif action == 'get_harvest_advice':
             status_code, response_body = handle_get_harvest_advice(request_data)
-        elif request.path == '/issue/farm':
+        elif action == 'report_farm_qc_issue':
             status_code, response_body = handle_report_farm_qc_issue(request_data)
-        elif request.path == '/schedule/pickup':
+        elif action == 'schedule_farm_pickup':
             status_code, response_body = handle_schedule_farm_pickup(request_data)
         else:
-            # Unrecognized POST path
-            print(f"Not Found: Unrecognized POST path: {request.path}", file=sys.stderr)
-            return ({"status": "error", "message": f"Endpoint {request.path} not found."}, 404)
+            return {"status": "error", "message": f"Unknown action: {action}. Supported actions: log_harvest, get_harvest_advice, report_farm_qc_issue, schedule_farm_pickup"}, 400
 
-        # Cloud Functions automatically JSON-ifies dictionaries and sets Content-Type
-        # It also handles the HTTP status code if you return a tuple (body, status_code)
-        return (response_body, status_code)
+        return response_body, status_code
 
     # --- Handle other HTTP methods ---
     else:
-        # Method Not Allowed for any other method on non-health check paths
-        print(f"Method Not Allowed: Method={request.method}, Path={request.path}", file=sys.stderr)
-        return ({"status": "error", "message": f"Method {request.method} not allowed for path {request.path}."}, 405)
-
-# The BigQuery client initialization happens at the top level
-# The main function handler is 'agrioptimize_backend_function'
+        return {"status": "error", "message": f"Method {request.method} not allowed."}, 405
